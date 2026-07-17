@@ -1,11 +1,224 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// Meta tags — set exactly as provided in landing-copy.md §6.
+const metaTitle = 'Shopify Sales Forecast — Explained | Trends Arc';
+const metaDescription =
+  "Free Shopify sales forecast from your CSV — get a 30-day revenue prediction plus a plain-English breakdown of what's driving it. No signup, no store connection.";
+
+// Where the primary CTA sends people — the upload/forecast tool (built in a later phase).
+const CTA_HREF = '/app';
+const ctaLabel = 'Upload your CSV — get your forecast free';
+const ctaSupport = 'No account. No card. No Shopify connection.';
+
+// Benefit sections (landing-copy.md §4). Each heading renders as an <h2>.
+const benefits = [
+  {
+    title: 'A forecast you can actually reason about',
+    body: 'Every prediction comes with a short “why” panel — plain-English drivers like a strong recent sales trend or a recurring weekday spike. You’re not asked to trust a black box; you’re shown what’s pulling the number up or down.',
+  },
+  {
+    title: 'No store connection, no signup',
+    body: 'Some tools only work if you hand over live access to your store. Trends Arc runs on a CSV export you already have — no OAuth, no app install, and no permissions review before you see a result.',
+  },
+  {
+    title: 'Built for stores with real, imperfect history',
+    body: 'It works with the sales history you actually have — including shorter or gappy records. If there isn’t enough data for a dependable forecast, we tell you plainly instead of returning a shaky number.',
+  },
+  {
+    title: 'Free to try, results in seconds',
+    body: 'Upload, get a 30-day revenue forecast with its explanation, and decide on reordering or ad spend the same minute. No trial timer, no locked features on the core forecast.',
+  },
+];
+
+// FAQ (landing-copy.md §5). Questions render as <h3> for a clean semantic outline.
+const faqs = [
+  {
+    q: 'Do I need to connect my Shopify store?',
+    a: 'No. Trends Arc runs on a CSV export of your order history — date, revenue, and units sold. There’s no OAuth connection, app install, or store-permission step.',
+  },
+  {
+    q: 'Is this free?',
+    a: 'Yes. Uploading your history and getting a 30-day forecast with its explanation is free, and it doesn’t require an account or a credit card.',
+  },
+  {
+    q: 'How accurate is the forecast?',
+    a: 'Accuracy depends on the quality and length of your own sales history — a store with a longer, cleaner record gets a more dependable forecast than one with a few sparse weeks. Rather than ask you to take the number on faith, we show the factors behind it so you can judge whether it matches what you know is happening in your business. If your history is too thin to forecast reliably, we say so instead of guessing.',
+  },
+  {
+    q: 'Is my data stored?',
+    a: 'Your forecast is generated from the file you upload for that session. We don’t require an account, and there’s no saved forecast history in this version. (See our Privacy Policy for the specifics.)',
+  },
+  {
+    q: 'What do I need in the CSV?',
+    a: 'Columns for date, revenue, and units sold. A SKU column is fine to include but isn’t required — the current forecast is store-level, not per-product.',
+  },
+];
 ---
 
-<Layout>
-	<Welcome />
+<Layout title={metaTitle} description={metaDescription}>
+  <!-- Skip link for keyboard users -->
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-on-primary"
+  >
+    Skip to content
+  </a>
+
+  <!-- Nav -->
+  <header class="border-b border-hairline">
+    <nav
+      class="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-4 sm:px-6"
+      aria-label="Primary"
+    >
+      <a href="/" class="flex items-center gap-2 font-mono text-sm tracking-tight text-ink">
+        <span
+          class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#171717] text-white"
+          aria-hidden="true"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 3v18h18"></path>
+            <path d="m19 9-5 5-4-4-3 3"></path>
+          </svg>
+        </span>
+        Trends Arc
+      </a>
+      <a
+        href={CTA_HREF}
+        class="inline-flex h-8 items-center rounded-pill bg-ink px-4 text-sm font-medium text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        Try it free
+      </a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- Hero -->
+    <section class="relative overflow-hidden">
+      <!-- Signature mesh gradient — hero-scale atmospheric backdrop only -->
+      <div
+        class="mesh-gradient pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] opacity-70"
+        aria-hidden="true"
+      >
+      </div>
+
+      <div class="mx-auto max-w-[1120px] px-4 pb-16 pt-16 text-center sm:px-6 sm:pb-24 sm:pt-24">
+        <h1
+          class="mx-auto max-w-4xl text-balance text-[2rem] font-semibold leading-[1.05] tracking-[-0.04em] text-ink sm:text-[2.75rem] lg:text-display-xl lg:tracking-[-0.05em]"
+        >
+          See your next 30 days of Shopify revenue — and exactly what&rsquo;s driving the number.
+        </h1>
+
+        <p class="mx-auto mt-6 max-w-2xl text-pretty text-body-lg text-body">
+          Most forecasts hand you a figure and leave you guessing; Trends Arc shows the reasoning
+          behind every prediction, so you can check it against what you already know about your
+          store before you act on it.
+        </p>
+
+        <div class="mt-9 flex flex-col items-center gap-3">
+          <a
+            href={CTA_HREF}
+            class="inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            {ctaLabel}
+          </a>
+          <p class="font-mono text-xs text-mute">{ctaSupport}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benefits -->
+    <section class="border-t border-hairline bg-canvas-soft">
+      <div class="mx-auto max-w-[1120px] px-4 py-16 sm:px-6 sm:py-24">
+        <div class="grid gap-4 sm:grid-cols-2">
+          {
+            benefits.map((b) => (
+              <article class="rounded-lg border border-hairline bg-canvas p-6 shadow-soft sm:p-8">
+                <h2 class="text-display-sm text-ink">{b.title}</h2>
+                <p class="mt-3 text-base leading-6 text-body">{b.body}</p>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="border-t border-hairline" aria-labelledby="faq-heading">
+      <div class="mx-auto max-w-[760px] px-4 py-16 sm:px-6 sm:py-24">
+        <p class="font-mono text-xs uppercase tracking-wide text-mute">FAQ</p>
+        <h2 id="faq-heading" class="mt-3 text-balance text-display-lg text-ink">
+          Frequently asked questions
+        </h2>
+        <dl class="mt-10 divide-y divide-hairline border-t border-hairline">
+          {
+            faqs.map((f) => (
+              <div class="py-6">
+                <dt>
+                  <h3 class="text-display-sm text-ink">{f.q}</h3>
+                </dt>
+                <dd class="mt-2 text-base leading-6 text-body">{f.a}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </section>
+
+    <!-- Closing CTA — elevated surface band, reuses the approved CTA copy -->
+    <section class="border-t border-hairline bg-canvas-soft">
+      <div class="mx-auto max-w-[1120px] px-4 py-16 text-center sm:px-6 sm:py-24">
+        <div class="flex flex-col items-center gap-3">
+          <a
+            href={CTA_HREF}
+            class="inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            {ctaLabel}
+          </a>
+          <p class="font-mono text-xs text-mute">{ctaSupport}</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-hairline">
+    <div
+      class="mx-auto flex max-w-[1120px] flex-col items-center justify-between gap-3 px-4 py-8 sm:flex-row sm:px-6"
+    >
+      <span class="flex items-center gap-2 font-mono text-sm text-ink">
+        <span
+          class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#171717] text-white"
+          aria-hidden="true"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 3v18h18"></path>
+            <path d="m19 9-5 5-4-4-3 3"></path>
+          </svg>
+        </span>
+        Trends Arc
+      </span>
+      <span class="text-sm text-mute">&copy; 2026 Trends Arc</span>
+    </div>
+  </footer>
 </Layout>

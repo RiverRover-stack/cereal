@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/*
+  Trends Arc — design tokens from DESIGN.md (Vercel-inspired stark system).
+  LIGHT is the only theme: a near-white canvas with ink-near-black text,
+  broken at hero scale by the signature multi-color mesh gradient.
+  @theme values generate Tailwind utilities (bg-*, text-*, font-*, rounded-*, shadow-*).
+*/
+@theme {
+  /*
+    Surfaces & ink. Semantic tokens: ink = primary foreground, canvas = page
+    surface, on-primary = text on an ink-filled element.
+  */
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #fafafa;
+  --color-canvas-soft-2: #f5f5f5;
+  --color-ink: #171717;
+  --color-body: #4d4d4d;
+  --color-mute: #888888;
+  --color-hairline: #ebebeb;
+  --color-hairline-strong: #a1a1a1;
+  --color-link: #0070f3;
+  --color-on-primary: #ffffff;
+
+  /* Type — geometric sans (Geist) with system fallbacks; mono for technical labels */
+  --font-sans: "Geist Variable", "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* Display type scale (weight 600, aggressive negative tracking) */
+  --text-display-xl: 3rem; /* 48px */
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.05em;
+  --text-display-xl--font-weight: 600;
+
+  --text-display-lg: 2rem; /* 32px */
+  --text-display-lg--line-height: 2.5rem;
+  --text-display-lg--letter-spacing: -0.04em;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-md: 1.5rem; /* 24px */
+  --text-display-md--line-height: 2rem;
+  --text-display-md--letter-spacing: -0.04em;
+  --text-display-md--font-weight: 600;
+
+  --text-display-sm: 1.25rem; /* 20px */
+  --text-display-sm--line-height: 1.75rem;
+  --text-display-sm--letter-spacing: -0.03em;
+  --text-display-sm--font-weight: 600;
+
+  --text-body-lg: 1.125rem; /* 18px */
+  --text-body-lg--line-height: 1.75rem;
+
+  /* Radius */
+  --radius-pill: 100px;
+
+  /* Stacked, low-opacity elevation — never a single heavy drop */
+  --shadow-soft: 0 1px 1px #00000005, 0 2px 2px #0000000a;
+  --shadow-float: 0 2px 2px #0000000a, 0 8px 16px -4px #0000000f;
+}
+
+/* Plain CSS variables (not utility-generating): the brand mesh-gradient stops */
+:root {
+  --grad-develop-start: #007cf0;
+  --grad-develop-end: #00dfd8;
+  --grad-preview-start: #7928ca;
+  --grad-preview-end: #ff0080;
+  --grad-ship-start: #ff4d4d;
+  --grad-ship-end: #f9cb28;
+  --grad-cyan: #50e3c2;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  touch-action: manipulation;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/*
+  Signature mesh gradient — the brand's entire decorative system.
+  Multi-stop (blue/teal, violet/pink, coral/amber) atmospheric backdrop,
+  hero scale only. Pure CSS radial gradients — no image request, zero JS.
+*/
+.mesh-gradient {
+  background-image:
+    radial-gradient(45% 55% at 18% 12%, color-mix(in srgb, var(--grad-develop-start) 55%, transparent) 0%, transparent 60%),
+    radial-gradient(40% 50% at 78% 8%, color-mix(in srgb, var(--grad-cyan) 55%, transparent) 0%, transparent 60%),
+    radial-gradient(50% 55% at 60% 30%, color-mix(in srgb, var(--grad-preview-end) 45%, transparent) 0%, transparent 60%),
+    radial-gradient(45% 55% at 32% 34%, color-mix(in srgb, var(--grad-preview-start) 40%, transparent) 0%, transparent 62%),
+    radial-gradient(45% 60% at 88% 40%, color-mix(in srgb, var(--grad-ship-end) 45%, transparent) 0%, transparent 60%),
+    radial-gradient(40% 55% at 8% 46%, color-mix(in srgb, var(--grad-ship-start) 40%, transparent) 0%, transparent 62%);
+  filter: blur(56px);
+}
