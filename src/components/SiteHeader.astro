@@ -1,0 +1,21 @@
+---
+import CtaButton from './CtaButton.astro';
+import Logo from './Logo.astro';
+
+interface Props {
+  ctaHref?: string;
+  ctaLabel?: string;
+}
+
+const { ctaHref = '/app', ctaLabel = 'Try it free' } = Astro.props;
+---
+
+<header class="border-b border-hairline">
+  <nav
+    class="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-4 sm:px-6"
+    aria-label="Primary"
+  >
+    <Logo variant="header" />
+    <CtaButton href={ctaHref} label={ctaLabel} size="sm" />
+  </nav>
+</header>

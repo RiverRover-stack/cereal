@@ -1,0 +1,20 @@
+---
+// The ink pill. `sm` is the nav-scale button — fixed 32px height, no elevation;
+// `lg` is the marketing-scale one that carries the soft shadow.
+interface Props {
+  href: string;
+  label: string;
+  size?: 'sm' | 'lg';
+}
+
+const { href, label, size = 'lg' } = Astro.props;
+
+const classes = {
+  sm: 'inline-flex h-8 items-center rounded-pill bg-ink px-4 text-sm font-medium text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
+  lg: 'inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
+}[size];
+---
+
+<a href={href} class={classes}>
+  {label}
+</a>

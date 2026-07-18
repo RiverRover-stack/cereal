@@ -103,6 +103,12 @@
       "skillPath": "skills/creative/SKILL.md",
       "computedHash": "dba38fc6f389ba6269a638dcb1c395f93022e165e8631579598b947ed6d9db8e"
     },
+    "design-guide": {
+      "source": "getpaperclipai/paperclip",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/design-guide/SKILL.md",
+      "computedHash": "c02905c51c4602fb241588cfeb02d8823f44ff6b31cccf77b343cb0d5043b9c2"
+    },
     "dithered": {
       "source": "bergside/awesome-design-skills",
       "sourceType": "github",
@@ -192,6 +198,36 @@
       "sourceType": "github",
       "skillPath": "skills/gradient/SKILL.md",
       "computedHash": "82f3621ff4f2ba8eeecfcac20044fcdc871961b644d9eee6c906ca8c898288c4"
+    },
+    "gsap-frameworks": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-frameworks/SKILL.md",
+      "computedHash": "08b3917649997d53f94a9831b5db21afafafc89ee3a9a020d2471c69c336bdd6"
+    },
+    "gsap-plugins": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-plugins/SKILL.md",
+      "computedHash": "50a320904c3053a1a7d01ea95235944814d18c0b5958f17e38046504aa6078a8"
+    },
+    "gsap-scrolltrigger": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-scrolltrigger/SKILL.md",
+      "computedHash": "358dd3381c74fc4be8db5a94e0cd008bf0fa7c1ccd45999671b0d61b9d9ffd9b"
+    },
+    "gsap-timeline": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-timeline/SKILL.md",
+      "computedHash": "e7c07909bb427f74e1bda1ff716bd97ae166269382f7abbd649c0d1ba8f6e0ec"
+    },
+    "gsap-utils": {
+      "source": "greensock/gsap-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gsap-utils/SKILL.md",
+      "computedHash": "72af4a036d417d6eaef7478eca2f28e760631fb78db822ba34a9c706797aab62"
     },
     "immersive": {
       "source": "bergside/awesome-design-skills",

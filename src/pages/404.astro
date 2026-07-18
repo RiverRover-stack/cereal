@@ -1,0 +1,39 @@
+---
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Page not found | Trends Arc"
+  description="That page doesn't exist. Head back to the Trends Arc home page."
+>
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-on-primary"
+  >
+    Skip to content
+  </a>
+
+  <SiteHeader />
+
+  <main id="main">
+    <section class="mx-auto max-w-[760px] px-4 py-24 text-center sm:px-6 sm:py-32">
+      <p class="font-mono text-xs uppercase tracking-wide text-mute">404</p>
+      <h1 class="mt-3 text-balance text-display-lg text-ink">This page doesn&rsquo;t exist.</h1>
+      <p class="mx-auto mt-4 max-w-lg text-pretty text-base leading-6 text-body">
+        The link may be out of date, or the address may have a typo in it.
+      </p>
+      <p class="mt-8">
+        <a
+          href="/"
+          class="text-base text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          Go to the home page
+        </a>
+      </p>
+    </section>
+  </main>
+
+  <SiteFooter />
+</Layout>

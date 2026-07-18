@@ -1,0 +1,211 @@
+---
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Layout from '../layouts/Layout.astro';
+
+// CSV column requirements are quoted from design-doc.md §Phase 2 (lines 149-153),
+// not invented here — they describe what the forecast endpoint will require once
+// it exists, so they are worded as future constraints rather than live validation.
+const csvRequirements = [
+  { column: 'date', note: 'Required. One row per day of sales history.' },
+  { column: 'revenue', note: 'Required. Numeric.' },
+  { column: 'units_sold', note: 'Required. Numeric.' },
+  { column: 'sku', note: 'Optional. The V1 forecast is store-level, not per-product.' },
+];
+---
+
+<Layout
+  title="Upload your sales history | Trends Arc"
+  description="Prepare a CSV of your store's sales history for a Trends Arc forecast. Forecasting is not available yet — this page shows what the tool needs and whether the backend is reachable."
+>
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-on-primary"
+  >
+    Skip to content
+  </a>
+
+  <SiteHeader />
+
+  <main id="main">
+    <div class="mx-auto max-w-[760px] px-4 py-16 sm:px-6 sm:py-24">
+      <p class="font-mono text-xs uppercase tracking-wide text-mute">Forecast tool</p>
+      <h1 class="mt-3 text-balance text-display-lg text-ink">Upload your sales history.</h1>
+
+      <!--
+        Stated before the form, not after the click — the whole pitch is that the
+        product explains itself instead of asking for trust, so the page cannot
+        let someone fill in a form before admitting nothing is behind it.
+      -->
+      <section
+        class="mt-8 rounded-lg border border-hairline bg-canvas p-6 shadow-soft"
+        aria-labelledby="status-heading"
+      >
+        <h2 id="status-heading" class="text-display-sm text-ink">Forecasting isn&rsquo;t live yet</h2>
+        <p class="mt-3 text-base leading-6 text-body">
+          The forecasting endpoint hasn&rsquo;t been built, so there is nothing to send a file to
+          yet. You can pick a file below to check it against the column requirements by eye, but it
+          stays in your browser — nothing is uploaded and no forecast is produced. When the model
+          ships, this page is where it will run.
+        </p>
+      </section>
+
+      <section class="mt-10" aria-labelledby="upload-heading">
+        <h2 id="upload-heading" class="text-display-sm text-ink">Your CSV file</h2>
+
+        <input id="csv-input" type="file" accept=".csv,text/csv" class="peer sr-only" />
+        <label
+          id="drop-zone"
+          for="csv-input"
+          class="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-hairline bg-canvas-soft px-6 py-12 text-center transition-colors hover:border-hairline-strong peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink"
+        >
+          <span
+            class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-hairline bg-canvas text-mute"
+            aria-hidden="true"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 16V4"></path>
+              <path d="m7 9 5-5 5 5"></path>
+              <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>
+            </svg>
+          </span>
+          <span class="mt-4 font-mono text-xs uppercase tracking-wide text-mute">CSV file</span>
+          <span class="mt-2 text-base font-medium text-ink">
+            Drag a file here, or click to browse
+          </span>
+          <span class="mt-1 text-sm text-mute">Exported from Shopify, or any tool that writes CSV</span>
+        </label>
+
+        <p id="file-readout" class="mt-3 text-sm text-body" role="status">No file selected.</p>
+
+        <button
+          id="submit-button"
+          type="button"
+          class="mt-6 inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          Get my forecast
+        </button>
+        <p id="submit-readout" class="mt-3 text-sm text-body" role="status"></p>
+      </section>
+
+      <section class="mt-12" aria-labelledby="requirements-heading">
+        <h2 id="requirements-heading" class="text-display-sm text-ink">What the file will need</h2>
+        <p class="mt-3 text-base leading-6 text-body">
+          These are the columns the forecast will read once it&rsquo;s built. Nothing on this page
+          checks them yet.
+        </p>
+        <dl class="mt-6 divide-y divide-hairline border-t border-hairline">
+          {
+            csvRequirements.map((r) => (
+              <div class="flex flex-col gap-1 py-4 sm:flex-row sm:gap-6">
+                <dt class="font-mono text-sm text-ink sm:w-40 sm:shrink-0">{r.column}</dt>
+                <dd class="text-sm leading-6 text-body">{r.note}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        <p class="mt-4 text-sm leading-6 text-mute">
+          Maximum file size 5&nbsp;MB. Larger files will be rejected once uploading works.
+        </p>
+      </section>
+
+      <section class="mt-12" aria-labelledby="backend-heading">
+        <h2 id="backend-heading" class="text-display-sm text-ink">Backend status</h2>
+        <p class="mt-3 text-base leading-6 text-body">
+          A live check against the API&rsquo;s health endpoint, run when this page loads — so the
+          connection is demonstrated rather than claimed.
+        </p>
+        <div
+          id="health-panel"
+          class="mt-4 flex items-center gap-3 rounded-lg border border-hairline bg-canvas-soft p-6"
+          role="status"
+        >
+          <span
+            id="health-dot"
+            class="inline-block h-2 w-2 shrink-0 rounded-pill bg-mute"
+            aria-hidden="true"></span>
+          <p id="health-text" class="text-sm leading-6 text-body">Checking&hellip;</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <SiteFooter />
+</Layout>
+
+<script>
+  import { API_URL, checkHealth } from '../lib/api';
+
+  const input = document.getElementById('csv-input') as HTMLInputElement | null;
+  const dropZone = document.getElementById('drop-zone');
+  const fileReadout = document.getElementById('file-readout');
+  const submitButton = document.getElementById('submit-button');
+  const submitReadout = document.getElementById('submit-readout');
+  const healthDot = document.getElementById('health-dot');
+  const healthText = document.getElementById('health-text');
+
+  const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+
+  const describeSelection = () => {
+    const file = input?.files?.[0];
+    if (!fileReadout) return;
+    fileReadout.textContent = file
+      ? `Selected: ${file.name} (${formatSize(file.size)}). This file has not left your browser.`
+      : 'No file selected.';
+  };
+
+  input?.addEventListener('change', describeSelection);
+
+  // The label already handles click-to-browse; these only add the drag path and
+  // must preventDefault or the browser navigates to the dropped file instead.
+  const setDragState = (active: boolean) => {
+    dropZone?.classList.toggle('border-hairline-strong', active);
+    dropZone?.classList.toggle('bg-canvas-soft-2', active);
+  };
+
+  dropZone?.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    setDragState(true);
+  });
+
+  dropZone?.addEventListener('dragleave', () => setDragState(false));
+
+  dropZone?.addEventListener('drop', (event) => {
+    event.preventDefault();
+    setDragState(false);
+    const dropped = event.dataTransfer?.files;
+    if (input && dropped && dropped.length > 0) {
+      input.files = dropped;
+      describeSelection();
+    }
+  });
+
+  submitButton?.addEventListener('click', () => {
+    if (!submitReadout) return;
+    submitReadout.textContent =
+      'Forecasting is not implemented yet — there is no endpoint to submit to, so nothing was sent. The backend currently serves only a health check. See "Backend status" below.';
+  });
+
+  checkHealth().then((result) => {
+    if (!healthDot || !healthText) return;
+
+    if (result.ok) {
+      healthDot.classList.replace('bg-mute', 'bg-ink');
+      healthText.textContent = `Backend reachable at ${API_URL} — /health returned ok. Forecasting is still not implemented.`;
+      return;
+    }
+
+    healthDot.classList.replace('bg-mute', 'bg-hairline-strong');
+    healthText.textContent = `Backend unreachable at ${API_URL} (${result.error}). Start it with "uvicorn app.main:app --port 8000" in the backend folder, or set PUBLIC_API_URL and rebuild.`;
+  });
+</script>

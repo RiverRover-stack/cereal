@@ -1,0 +1,49 @@
+---
+// The glyph + wordmark lockup. The two variants are not one mark at two sizes —
+// they differ on element type (the footer mark is not a link), font family, and
+// elevation, so each set of classes is transcribed rather than parameterised.
+interface Props {
+  variant?: 'header' | 'footer';
+}
+
+const { variant = 'header' } = Astro.props;
+const isHeader = variant === 'header';
+
+const Wrapper = isHeader ? 'a' : 'span';
+const wrapperProps = isHeader
+  ? { href: '/', class: 'flex items-center gap-2.5 text-ink' }
+  : { class: 'flex items-center gap-2 font-mono text-sm text-ink' };
+
+const tileClass = isHeader
+  ? 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717] text-white shadow-soft'
+  : 'inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#171717] text-white';
+
+const glyphSize = isHeader ? '18' : '14';
+const glyphStroke = isHeader ? '2.25' : '2';
+---
+
+<Wrapper {...wrapperProps}>
+  <span class={tileClass} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={glyphSize}
+      height={glyphSize}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width={glyphStroke}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 3v18h18"></path>
+      <path d="m19 9-5 5-4-4-3 3"></path>
+    </svg>
+  </span>
+  {
+    isHeader ? (
+      <span class="font-sans text-xl font-semibold tracking-[-0.03em]">Trends Arc</span>
+    ) : (
+      'Trends Arc'
+    )
+  }
+</Wrapper>
