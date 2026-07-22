@@ -1,27 +1,48 @@
 # Trends Arc
 
-An explainable sales forecasting tool for e-commerce sellers. A seller uploads a CSV
-of their order history; the tool returns a 30-day revenue forecast plus a plain-English
-explanation of *why* the forecast looks the way it does (SHAP attribution, translated
-into readable sentences). See `design-doc.md` for the full product rationale.
+*An explainable sales forecast for e-commerce sellers — not just a number, but why.*
 
-## Architecture
+## What is this?
 
-| Layer | Location | Stack |
-|---|---|---|
-| Frontend | `src/` | Astro + Tailwind CSS |
-| API | `backend/` | FastAPI, trains an XGBoost model per request on the upload |
-| Forecasting model | `backend/app/forecasting.py` | Recursive 30-day XGBoost regressor |
-| Explanation | `backend/app/explain.py` | SHAP attribution → templated sentences |
-| Offline research/training | `models/` | Standalone backtest + hyperparameter search over synthetic panel data |
-| Synthetic data generation | `backend/scripts/generate_sales_data.py` | Multiplicative trend/seasonality/event/promo/noise model with known ground truth |
+If you sell things online, you can easily see what your sales *were* — last
+week, last month. What's harder is knowing what they're *about to be*.
 
-There is no persistent database and no pre-trained global model: the API fits a model
-inside each `/forecast` request, on the data the seller just uploaded.
+Trends Arc answers that. Upload a CSV of your order history and get back:
 
-## Quickstart
+- A **30-day revenue forecast**
+- A **plain-English explanation** of why — e.g. *"your last 3 Fridays show a
+  recurring spike, which is pulling the forecast up"*
 
-Requires Node ≥22.12 and Python 3.13.
+Most forecasting tools stop at the number. An unexplained prediction is hard
+to trust and easy to ignore. Trends Arc shows its reasoning, so you can check
+it against what you already know about your own business.
+
+No sign-up. Under the hood, it trains a small model (XGBoost) on your data
+and uses SHAP to turn its reasoning into readable sentences instead of raw
+statistics.
+
+## How it works
+
+1. **Upload** a CSV — date, revenue, units, SKU
+2. **Validate** — bad or missing data is flagged in plain language
+3. **Forecast** — a model trains on your history and projects 30 days out
+4. **Explain** — a "why" panel breaks down what's driving the forecast
+
+## Current limitations (V1)
+
+Deliberate scope cuts for this first version, not oversights:
+
+- CSV upload only — no live Shopify connection
+- No accounts or saved forecast history
+- Store-level only — no per-product breakdown
+- 30-day horizon only
+
+For the full reasoning behind these calls, see [`design-doc.md`](design-doc.md)
+and [`docs/product/`](docs/product/).
+
+## Setup
+
+Requires **Node ≥22.12** and **Python 3.13**.
 
 ```bash
 npm install
@@ -36,53 +57,24 @@ cd ..
 npm run app
 ```
 
-`npm run app` starts both dev servers (Astro on :4321, FastAPI on :8000) and tears
-down cleanly on Ctrl+C. To run them separately: `npm run app:web` / `npm run app:api`.
+`npm run app` starts both dev servers (Astro on `:4321`, FastAPI on `:8000`)
+and tears down cleanly on Ctrl+C. Run them separately with `npm run app:web`
+and `npm run app:api`.
 
-Copy `.env.example` to `.env` if you need to point the frontend at a non-default API URL.
+Copy `.env.example` to `.env` if the frontend needs to point at a non-default
+API URL.
 
-## Project structure
+There's no persistent database and no pre-trained global model — the API
+fits a fresh model inside each `/forecast` request, on the data just
+uploaded.
 
-```
-src/                    Astro frontend (pages, components, API client)
-backend/                FastAPI service
-  app/                    validation, forecasting, explanation, main API
-  scripts/                synthetic sales data generator
-  tests/                  pytest suite + live-model backtest
-models/                 Offline training/backtest pipeline for the research model
-  train.py                entry point: sweep -> ablation -> A/B -> backtest -> SHAP -> artifacts
-  train_pipeline.py       the numbered pipeline stages train.py calls
-  artifacts/              saved model + metrics from the last training run
-data/                   Generated/processed CSVs (synthetic sales panel)
-scripts/                Repo-root data-prep scripts (build_dataset.py, skewness_analysis.py)
-docs/                   Design docs, ADRs, architecture/validation reports
-  adr/                    Architecture Decision Records
-  product/                Product planning docs (PRD, design language, landing copy, competitor research)
-reports/                Generated analysis reports (e.g. skewness)
-```
+## Architecture
 
-## Testing
-
-```bash
-cd backend
-.venv\Scripts\python -m pytest -q          # unit + smoke tests
-.venv\Scripts\python -m tests.backtest      # rolling-origin backtest against the live model
-```
-
-The offline research model has its own reproducible pipeline:
-
-```bash
-backend\.venv\Scripts\python.exe models\train.py
-```
-
-## Documentation
-
-- `design-doc.md` — problem, solution, MVP scope. Cited by line number throughout
-  the backend code (e.g. `design-doc.md:107`).
-- `docs/adr/` — Architecture Decision Records.
-- `docs/architecture-review.md`, `docs/forecast-validation.md`, `docs/mvp-testing-gaps.md` —
-  point-in-time engineering reviews.
-- `models/README.md` — training results, leakage findings, and honest limitations of
-  the research forecasting model.
-- `backend/README.md` — API endpoints and local/container run instructions.
-- `docs/product/` — PRD, visual design language, landing page copy, competitor research.
+| Layer | Location | Stack |
+|---|---|---|
+| Frontend | `src/` | Astro + Tailwind CSS |
+| API | `backend/` | FastAPI, trains an XGBoost model per request |
+| Forecasting model | `backend/app/forecasting.py` | Recursive 30-day XGBoost regressor |
+| Explanation | `backend/app/explain.py` | SHAP attribution → templated sentences |
+| Offline research/training | `models/` | Backtest + hyperparameter search over synthetic panel data |
+| Synthetic data generation | `backend/scripts/generate_sales_data.py` | Trend/seasonality/event/promo/noise model with known ground truth |
