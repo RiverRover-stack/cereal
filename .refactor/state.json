@@ -15,10 +15,16 @@
       "commit": "2090e84",
       "summary": "extracted _recursive_forecast_loop() out of _forecast_recursive() (was 52 lines); left file-length flag as-is (3 parallel small strategies + rationale docstring)",
       "tests": "pass"
+    },
+    {
+      "module": "backend/scripts",
+      "files": ["backend/scripts/generate_sales_data.py"],
+      "commit": "39681cb",
+      "summary": "split generate()/verify()/main() into focused helpers (_build_intensity, _expand_to_line_items, _build_components_frame, per-section _verify_* functions, _build_arg_parser, _write_outputs); verified byte-identical CSV regeneration vs committed data/*.csv",
+      "tests": "pass"
     }
   ],
   "batches_remaining": [
-    "backend/scripts (generate_sales_data.py)",
     "backend/tests (backtest.py)",
     "scripts (build_dataset.py)",
     "src/lib (api.ts)"
