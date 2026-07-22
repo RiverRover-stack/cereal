@@ -29,10 +29,21 @@
       "commit": "0198988",
       "summary": "split main() into _build_arg_parser, _run_folds, _print_fold_table, _print_mape_summary; verified identical MAE/RMSE/MAPE output before vs after; no hotspots remaining",
       "tests": "pass"
+    },
+    {
+      "module": "scripts",
+      "files": ["scripts/build_dataset.py"],
+      "commit": "bb24bb6",
+      "summary": "split build() into _load_sources, _aggregate_daily_sku, _merge_events_and_catalogue, _add_lag_features; verified byte-identical master_df.csv regeneration",
+      "tests": "pass"
+    },
+    {
+      "module": "src/lib",
+      "files": ["src/lib/api.ts"],
+      "commit": null,
+      "summary": "no change: the scanner's generic brace-matching heuristic misidentified an `if` block as an 85-line function (false positive) -- on inspection both real functions (checkHealth ~20 lines, submitForecast ~45 lines) are well within limits",
+      "tests": "n/a (no change made)"
     }
   ],
-  "batches_remaining": [
-    "scripts (build_dataset.py)",
-    "src/lib (api.ts)"
-  ]
+  "batches_remaining": []
 }
