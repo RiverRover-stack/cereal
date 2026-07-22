@@ -14,20 +14,27 @@ DATA = ROOT / "data"
 OUT = DATA / "processed" / "master_df.csv"
 
 
-def build() -> pd.DataFrame:
+def _load_sources() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df_line_items = pd.read_csv(DATA / "sales_line_items.csv")
     df_events = pd.read_csv(DATA / "events.csv")
     df_catalogue = pd.read_csv(DATA / "catalogue.csv")
 
     df_line_items["date"] = pd.to_datetime(df_line_items["date"])
     df_events["date"] = pd.to_datetime(df_events["date"])
+    return df_line_items, df_events, df_catalogue
 
-    daily_sku = (
+
+def _aggregate_daily_sku(df_line_items: pd.DataFrame) -> pd.DataFrame:
+    return (
         df_line_items.groupby(["date", "sku"])
         .agg(total_units=("units_sold", "sum"), total_revenue=("revenue", "sum"))
         .reset_index()
     )
 
+
+def _merge_events_and_catalogue(
+    daily_sku: pd.DataFrame, df_events: pd.DataFrame, df_catalogue: pd.DataFrame
+) -> pd.DataFrame:
     master_df = pd.merge(daily_sku, df_events[["date", "event"]], on="date", how="left")
     master_df["is_promo_active"] = master_df["event"].notna().astype(int)
     master_df = pd.merge(
@@ -36,7 +43,10 @@ def build() -> pd.DataFrame:
         on="sku",
         how="left",
     )
+    return master_df
 
+
+def _add_lag_features(master_df: pd.DataFrame) -> pd.DataFrame:
     master_df.sort_values(["sku", "date"], inplace=True)
 
     master_df["units_lag_7"] = master_df.groupby("sku")["total_units"].shift(7)
@@ -47,6 +57,14 @@ def build() -> pd.DataFrame:
     master_df["units_rolling_7d_avg"] = master_df.groupby("sku")["total_units"].transform(
         lambda x: x.shift(1).rolling(window=7).mean()
     )
+    return master_df
+
+
+def build() -> pd.DataFrame:
+    df_line_items, df_events, df_catalogue = _load_sources()
+    daily_sku = _aggregate_daily_sku(df_line_items)
+    master_df = _merge_events_and_catalogue(daily_sku, df_events, df_catalogue)
+    master_df = _add_lag_features(master_df)
 
     master_df.drop(columns=["event"], inplace=True)
     master_df.dropna(inplace=True)
