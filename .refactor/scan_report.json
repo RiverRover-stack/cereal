@@ -1,4 +1,20 @@
 {
-  "total_files_scanned": 2,
-  "hotspots": []
+  "total_files_scanned": 1,
+  "hotspots": [
+    {
+      "file": "src\\lib\\api.ts",
+      "lines": 137,
+      "long_functions": [
+        {
+          "start_line": 25,
+          "length": 85,
+          "signature": "if (!response.ok) {"
+        }
+      ],
+      "max_nesting": 3,
+      "flags": [
+        "1_long_function(s)"
+      ]
+    }
+  ]
 }
