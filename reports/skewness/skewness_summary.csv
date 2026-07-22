@@ -1,0 +1,5 @@
+column,skew_raw,kurtosis_raw,skew_cbrt,kurtosis_cbrt,skew_log1p,max_over_median,p99,max
+total_units,4.6944,42.3647,1.0973,1.8765,0.6214,37.25,35.0,149.0
+total_revenue,3.5397,20.4551,0.8835,0.9823,0.036,27.1227,1765.091,5035.33
+units_lag_7,4.7375,43.8907,1.0934,1.8703,0.6218,37.25,35.0,149.0
+units_rolling_7d_avg,4.1547,27.5812,1.5077,3.2829,1.0222,20.8,31.1429,89.1429

@@ -1,0 +1,16 @@
+# Test-only dependencies. Deliberately separate from requirements.txt so the
+# Cloud Run image (which installs only requirements.txt) doesn't carry them.
+#
+#   .venv\Scripts\python -m pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest==9.1.1
+# Backs fastapi.testclient.TestClient — importing it fails without httpx.
+httpx==0.28.1
+
+# Evaluation only — TimeSeriesSplit for rolling-origin folds, and
+# accuracy/f1 for the post-hoc directional metric. Used by tests/backtest.py
+# and tests/metrics.py, never by app/, so it stays out of the Cloud Run image.
+# (shap pulls it in transitively; pinned here because the harness imports it
+# directly.)
+scikit-learn==1.9.0

@@ -3,8 +3,18 @@
 fastapi==0.128.0
 uvicorn[standard]==0.40.0
 
+# Required for multipart uploads — FastAPI raises at import time if a route
+# declares UploadFile without it, so this is runtime, not a test-only dep.
+python-multipart==0.0.32
+
 # Unused by the Phase 1 scaffold; pinned now so the Phase 2-4 forecasting work
 # (CSV validation, XGBoost, SHAP) inherits a resolved, wheel-available set.
 pandas==2.3.1
 xgboost==3.1.3
 shap==0.50.0
+
+# Imported directly by app/forecasting.py (array maths, log1p/expm1 target
+# transform). It arrives transitively via pandas/xgboost anyway, but pinning it
+# explicitly means a transitive-dep change cannot silently move the version the
+# forecast numbers were measured against.
+numpy==2.4.6

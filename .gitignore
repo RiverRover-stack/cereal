@@ -27,3 +27,7 @@ pnpm-debug.log*
 __pycache__/
 *.pyc
 .venv/
+
+# oversized test fixture (>5MB) — regenerate with
+# `python backend/tests/fixtures/generate_fixtures.py --oversized`
+backend/tests/fixtures/oversized.csv

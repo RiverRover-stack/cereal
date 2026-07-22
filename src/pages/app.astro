@@ -3,11 +3,9 @@ import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import Layout from '../layouts/Layout.astro';
 
-// CSV column requirements are quoted from design-doc.md §Phase 2 (lines 149-153),
-// not invented here — they describe what the forecast endpoint will require once
-// it exists, so they are worded as future constraints rather than live validation.
+// CSV column requirements are quoted from design-doc.md §Phase 2 (lines 149-153).
 const csvRequirements = [
-  { column: 'date', note: 'Required. One row per day of sales history.' },
+  { column: 'date', note: 'Required. One row per day of sales history, YYYY-MM-DD.' },
   { column: 'revenue', note: 'Required. Numeric.' },
   { column: 'units_sold', note: 'Required. Numeric.' },
   { column: 'sku', note: 'Optional. The V1 forecast is store-level, not per-product.' },
@@ -16,7 +14,7 @@ const csvRequirements = [
 
 <Layout
   title="Upload your sales history | Trends Arc"
-  description="Prepare a CSV of your store's sales history for a Trends Arc forecast. Forecasting is not available yet — this page shows what the tool needs and whether the backend is reachable."
+  description="Upload a CSV of your store's sales history and get a 30-day revenue forecast from Trends Arc."
 >
   <a
     href="#main"
@@ -31,24 +29,10 @@ const csvRequirements = [
     <div class="mx-auto max-w-[760px] px-4 py-16 sm:px-6 sm:py-24">
       <p class="font-mono text-xs uppercase tracking-wide text-mute">Forecast tool</p>
       <h1 class="mt-3 text-balance text-display-lg text-ink">Upload your sales history.</h1>
-
-      <!--
-        Stated before the form, not after the click — the whole pitch is that the
-        product explains itself instead of asking for trust, so the page cannot
-        let someone fill in a form before admitting nothing is behind it.
-      -->
-      <section
-        class="mt-8 rounded-lg border border-hairline bg-canvas p-6 shadow-soft"
-        aria-labelledby="status-heading"
-      >
-        <h2 id="status-heading" class="text-display-sm text-ink">Forecasting isn&rsquo;t live yet</h2>
-        <p class="mt-3 text-base leading-6 text-body">
-          The forecasting endpoint hasn&rsquo;t been built, so there is nothing to send a file to
-          yet. You can pick a file below to check it against the column requirements by eye, but it
-          stays in your browser — nothing is uploaded and no forecast is produced. When the model
-          ships, this page is where it will run.
-        </p>
-      </section>
+      <p class="mt-3 text-base leading-6 text-body">
+        Upload a CSV export of your order history and get a 30-day revenue forecast, generated
+        from a model trained on your own data. Nothing is saved after the forecast is returned.
+      </p>
 
       <section class="mt-10" aria-labelledby="upload-heading">
         <h2 id="upload-heading" class="text-display-sm text-ink">Your CSV file</h2>
@@ -91,19 +75,61 @@ const csvRequirements = [
         <button
           id="submit-button"
           type="button"
-          class="mt-6 inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          class="mt-6 inline-flex items-center justify-center rounded-pill bg-ink px-7 py-3.5 text-base font-medium text-on-primary shadow-soft transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
           Get my forecast
         </button>
         <p id="submit-readout" class="mt-3 text-sm text-body" role="status"></p>
+
+        <div id="error-panel" class="mt-4 hidden rounded-lg border border-hairline-strong bg-canvas-soft p-4" role="alert">
+          <p class="text-sm font-medium text-ink">We couldn&rsquo;t generate a forecast</p>
+          <p id="error-text" class="mt-1 text-sm leading-6 text-body"></p>
+        </div>
+      </section>
+
+      <section id="result-panel" class="mt-12 hidden" aria-labelledby="result-heading">
+        <h2 id="result-heading" class="text-display-sm text-ink">Your 30-day forecast</h2>
+
+        <p id="result-meta" class="mt-2 text-sm text-mute"></p>
+
+        <div class="mt-6 rounded-lg border border-hairline bg-canvas p-6 shadow-soft">
+          <p class="font-mono text-xs uppercase tracking-wide text-mute">Predicted revenue, next 30 days</p>
+          <p id="result-total" class="mt-2 text-display-xl text-ink"></p>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-hairline bg-canvas p-6 shadow-soft">
+          <div class="flex items-baseline justify-between">
+            <p class="font-mono text-xs uppercase tracking-wide text-mute">Daily forecast</p>
+            <p id="chart-range" class="text-xs text-mute"></p>
+          </div>
+          <svg
+            id="forecast-chart"
+            class="mt-4 h-48 w-full"
+            viewBox="0 0 640 200"
+            preserveAspectRatio="none"
+            role="img"
+            aria-labelledby="chart-desc"
+          >
+            <desc id="chart-desc">Line chart of predicted daily revenue for the next 30 days.</desc>
+          </svg>
+          <div class="mt-2 flex justify-between text-xs text-mute">
+            <span id="chart-min"></span>
+            <span id="chart-max"></span>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-hairline bg-canvas-soft p-6">
+          <p class="text-sm font-medium text-ink">Why this forecast looks the way it does</p>
+          <ul id="explanation-list" class="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-body"></ul>
+          <p id="explanation-fallback" class="mt-2 hidden text-sm leading-6 text-body">
+            No single factor stood out for this forecast; use it alongside what you already know
+            about your business.
+          </p>
+        </div>
       </section>
 
       <section class="mt-12" aria-labelledby="requirements-heading">
-        <h2 id="requirements-heading" class="text-display-sm text-ink">What the file will need</h2>
-        <p class="mt-3 text-base leading-6 text-body">
-          These are the columns the forecast will read once it&rsquo;s built. Nothing on this page
-          checks them yet.
-        </p>
+        <h2 id="requirements-heading" class="text-display-sm text-ink">What the file needs</h2>
         <dl class="mt-6 divide-y divide-hairline border-t border-hairline">
           {
             csvRequirements.map((r) => (
@@ -115,15 +141,16 @@ const csvRequirements = [
           }
         </dl>
         <p class="mt-4 text-sm leading-6 text-mute">
-          Maximum file size 5&nbsp;MB. Larger files will be rejected once uploading works.
+          Maximum file size 5&nbsp;MB. At least 30 days of history is needed to produce a
+          forecast.
         </p>
       </section>
 
       <section class="mt-12" aria-labelledby="backend-heading">
         <h2 id="backend-heading" class="text-display-sm text-ink">Backend status</h2>
         <p class="mt-3 text-base leading-6 text-body">
-          A live check against the API&rsquo;s health endpoint, run when this page loads — so the
-          connection is demonstrated rather than claimed.
+          A live check against the API&rsquo;s health endpoint, run when this page loads &mdash;
+          so the connection is demonstrated rather than claimed.
         </p>
         <div
           id="health-panel"
@@ -144,23 +171,43 @@ const csvRequirements = [
 </Layout>
 
 <script>
-  import { API_URL, checkHealth } from '../lib/api';
+  import { API_URL, checkHealth, submitForecast, type DailyForecastPoint } from '../lib/api';
 
   const input = document.getElementById('csv-input') as HTMLInputElement | null;
   const dropZone = document.getElementById('drop-zone');
   const fileReadout = document.getElementById('file-readout');
-  const submitButton = document.getElementById('submit-button');
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement | null;
   const submitReadout = document.getElementById('submit-readout');
+  const errorPanel = document.getElementById('error-panel');
+  const errorText = document.getElementById('error-text');
+  const resultPanel = document.getElementById('result-panel');
+  const resultMeta = document.getElementById('result-meta');
+  const resultTotal = document.getElementById('result-total');
+  const chartRange = document.getElementById('chart-range');
+  const chartMin = document.getElementById('chart-min');
+  const chartMax = document.getElementById('chart-max');
+  const chartSvg = document.getElementById('forecast-chart') as unknown as SVGSVGElement | null;
+  const explanationList = document.getElementById('explanation-list');
+  const explanationFallback = document.getElementById('explanation-fallback');
   const healthDot = document.getElementById('health-dot');
   const healthText = document.getElementById('health-text');
 
   const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 
+  const currency = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  });
+
+  const dateLabel = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
   const describeSelection = () => {
     const file = input?.files?.[0];
     if (!fileReadout) return;
     fileReadout.textContent = file
-      ? `Selected: ${file.name} (${formatSize(file.size)}). This file has not left your browser.`
+      ? `Selected: ${file.name} (${formatSize(file.size)}).`
       : 'No file selected.';
   };
 
@@ -190,10 +237,136 @@ const csvRequirements = [
     }
   });
 
-  submitButton?.addEventListener('click', () => {
-    if (!submitReadout) return;
-    submitReadout.textContent =
-      'Forecasting is not implemented yet — there is no endpoint to submit to, so nothing was sent. The backend currently serves only a health check. See "Backend status" below.';
+  function hideError() {
+    errorPanel?.classList.add('hidden');
+  }
+
+  function showError(message: string) {
+    resultPanel?.classList.add('hidden');
+    if (errorText) errorText.textContent = message;
+    errorPanel?.classList.remove('hidden');
+  }
+
+  // Renders a single polyline into the chart's viewBox (640x200, 16px padding on
+  // every side). `preserveAspectRatio="none"` on the <svg> is what lets this fixed
+  // coordinate space stretch to the container's actual width responsively.
+  function renderChart(points: DailyForecastPoint[]) {
+    if (!chartSvg) return;
+    const values = points.map((p) => p.predicted_revenue);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+
+    const padX = 16;
+    const padY = 16;
+    const width = 640 - padX * 2;
+    const height = 200 - padY * 2;
+
+    const coords = points.map((p, i) => {
+      const x = padX + (points.length === 1 ? 0 : (i / (points.length - 1)) * width);
+      const y = padY + height - ((p.predicted_revenue - min) / span) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    // Clear any previous run's path/dots, keep the <desc>.
+    chartSvg.querySelectorAll('polyline, circle').forEach((el) => el.remove());
+
+    const polyline = document.createElementNS(svgNS, 'polyline');
+    polyline.setAttribute('points', coords.join(' '));
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', 'var(--color-ink)');
+    polyline.setAttribute('stroke-width', '2');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    polyline.setAttribute('stroke-linecap', 'round');
+    // Undoes the viewBox's independent x/y scaling for the stroke itself, so the
+    // line doesn't come out artificially thick or thin once the SVG is stretched.
+    polyline.setAttribute('vector-effect', 'non-scaling-stroke');
+    chartSvg.appendChild(polyline);
+
+    [0, coords.length - 1].forEach((i) => {
+      const [x, y] = coords[i].split(',');
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', x);
+      circle.setAttribute('cy', y);
+      circle.setAttribute('r', '3');
+      circle.setAttribute('fill', 'var(--color-ink)');
+      circle.setAttribute('vector-effect', 'non-scaling-stroke');
+      chartSvg.appendChild(circle);
+    });
+
+    if (chartMin) chartMin.textContent = `Low ${currency.format(min)}`;
+    if (chartMax) chartMax.textContent = `High ${currency.format(max)}`;
+    if (chartRange) {
+      chartRange.textContent = `${dateLabel(points[0].date)} – ${dateLabel(points[points.length - 1].date)}`;
+    }
+  }
+
+  // Sentences are pre-ranked by the backend (SHAP mean-abs-contribution order,
+  // ADR-0006) — rendered as-is, never re-sorted here.
+  function renderExplanation(sentences: string[]) {
+    if (!explanationList || !explanationFallback) return;
+    explanationList.innerHTML = '';
+
+    if (sentences.length === 0) {
+      explanationList.classList.add('hidden');
+      explanationFallback.classList.remove('hidden');
+      return;
+    }
+
+    explanationFallback.classList.add('hidden');
+    explanationList.classList.remove('hidden');
+    for (const sentence of sentences) {
+      const item = document.createElement('li');
+      item.textContent = sentence;
+      explanationList.appendChild(item);
+    }
+  }
+
+  function showResult(result: {
+    storeLevel: { dailyForecast: DailyForecastPoint[]; total30Day: number };
+    rows: number;
+    aggregated: boolean;
+    dateRange: { start: string; end: string };
+    explanation: string[];
+  }) {
+    hideError();
+    if (resultTotal) resultTotal.textContent = currency.format(result.storeLevel.total30Day);
+    if (resultMeta) {
+      const historyNote = result.aggregated
+        ? `${result.rows} days of history (aggregated from your file's line items)`
+        : `${result.rows} days of history`;
+      resultMeta.textContent = `Trained on ${historyNote}, ${result.dateRange.start} to ${result.dateRange.end}.`;
+    }
+    renderChart(result.storeLevel.dailyForecast);
+    renderExplanation(result.explanation);
+    resultPanel?.classList.remove('hidden');
+    resultPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  submitButton?.addEventListener('click', async () => {
+    const file = input?.files?.[0];
+    if (!file) {
+      if (submitReadout) submitReadout.textContent = 'Choose a CSV file first.';
+      return;
+    }
+
+    hideError();
+    resultPanel?.classList.add('hidden');
+    if (submitButton) submitButton.disabled = true;
+    if (submitReadout) submitReadout.textContent = 'Uploading and training your forecast… this takes a few seconds.';
+
+    const result = await submitForecast(file);
+
+    if (submitButton) submitButton.disabled = false;
+    if (submitReadout) submitReadout.textContent = '';
+
+    if (!result.ok) {
+      showError(result.error);
+      return;
+    }
+
+    showResult(result);
   });
 
   checkHealth().then((result) => {
@@ -201,7 +374,7 @@ const csvRequirements = [
 
     if (result.ok) {
       healthDot.classList.replace('bg-mute', 'bg-ink');
-      healthText.textContent = `Backend reachable at ${API_URL} — /health returned ok. Forecasting is still not implemented.`;
+      healthText.textContent = `Backend reachable at ${API_URL} — /health returned ok.`;
       return;
     }
 
