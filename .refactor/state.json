@@ -1,0 +1,6 @@
+{
+  "branch": "refactor/20260722-2044",
+  "test_cmd": "cd backend && .venv/Scripts/python.exe -m pytest -q",
+  "batches_completed": [],
+  "batches_remaining": []
+}
