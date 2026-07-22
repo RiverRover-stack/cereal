@@ -255,6 +255,42 @@ def _clip(values: np.ndarray) -> np.ndarray:
     return np.clip(values, 0.0, None)
 
 
+def _recursive_forecast_loop(
+    model: XGBRegressor,
+    dates: pd.DatetimeIndex,
+    known: pd.DataFrame,
+    seed_window: list[float],
+    target: str,
+) -> tuple[list[dict[str, object]], list[float]]:
+    """Step through `dates` one day at a time, feeding each prediction back into
+    the rolling window that seeds the next day's feature row.
+
+    Seeded with the true tail of the history; this is where 30-step compounding
+    lives -- the backtest measures it per fold rather than assuming it is
+    tolerable.
+    """
+    window = list(seed_window)
+    rows: list[dict[str, object]] = []
+    predictions: list[float] = []
+
+    for position in range(len(dates)):
+        row = {
+            **{name: known.loc[position, name] for name in KNOWN_FEATURES},
+            ROLLING_FEATURE: float(np.mean(window[-ROLLING_WINDOW:])),
+        }
+        raw = float(
+            model.predict(pd.DataFrame([row], columns=list(RECURSIVE_FEATURES)))[0]
+        )
+        # Invert to dollars *before* feeding back, so the rolling window the next
+        # step sees is on the same scale as the actual history that seeded it.
+        value = float(_clip(_inverse([raw], target))[0])
+        rows.append(row)
+        predictions.append(value)
+        window.append(value)
+
+    return rows, predictions
+
+
 def _forecast_recursive(
     frame: pd.DataFrame,
     horizon: int,
@@ -273,28 +309,8 @@ def _forecast_recursive(
     dates = future_dates(frame["date"].iloc[-1], horizon)
     known = _known_feature_rows(dates, start)
 
-    # Seeded with the true tail of the history; each prediction is appended so
-    # the next day's window is (actuals -> predictions) as it slides forward.
-    # This is where 30-step compounding lives; the backtest measures it per fold
-    # rather than assuming it is tolerable.
-    window = list(frame["revenue"].iloc[-ROLLING_WINDOW:])
-    rows: list[dict[str, object]] = []
-    predictions: list[float] = []
-
-    for position in range(len(dates)):
-        row = {
-            **{name: known.loc[position, name] for name in KNOWN_FEATURES},
-            ROLLING_FEATURE: float(np.mean(window[-ROLLING_WINDOW:])),
-        }
-        raw = float(
-            model.predict(pd.DataFrame([row], columns=list(RECURSIVE_FEATURES)))[0]
-        )
-        # Invert to dollars *before* feeding back, so the rolling window the next
-        # step sees is on the same scale as the actual history that seeded it.
-        value = float(_clip(_inverse([raw], target))[0])
-        rows.append(row)
-        predictions.append(value)
-        window.append(value)
+    seed_window = list(frame["revenue"].iloc[-ROLLING_WINDOW:])
+    rows, predictions = _recursive_forecast_loop(model, dates, known, seed_window, target)
 
     return Forecast(
         dates=dates,

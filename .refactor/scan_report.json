@@ -2,39 +2,12 @@
   "total_files_scanned": 4,
   "hotspots": [
     {
-      "file": "models\\train_pipeline.py",
-      "lines": 569,
-      "long_functions": [
-        {
-          "start_line": 104,
-          "length": 63,
-          "signature": "def step1_hyperparameter_sweep("
-        },
-        {
-          "start_line": 207,
-          "length": 60,
-          "signature": "def step2_target_transform_ab("
-        },
-        {
-          "start_line": 267,
-          "length": 55,
-          "signature": "def _run_backtest_folds("
-        },
-        {
-          "start_line": 438,
-          "length": 57,
-          "signature": "def _explain_with_shap("
-        },
-        {
-          "start_line": 512,
-          "length": 58,
-          "signature": "def step7_save_artifacts("
-        }
-      ],
+      "file": "backend\\app\\forecasting.py",
+      "lines": 476,
+      "long_functions": [],
       "max_nesting": 4,
       "flags": [
-        "file_too_long(569 lines)",
-        "5_long_function(s)"
+        "file_too_long(476 lines)"
       ]
     }
   ]
