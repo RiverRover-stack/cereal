@@ -460,14 +460,19 @@ def apportion(total: int, weights: np.ndarray) -> np.ndarray:
 # --------------------------------------------------------------------------
 
 
-def generate(config: Config) -> dict[str, pd.DataFrame]:
-    rng = np.random.default_rng(config.seed)
+def _build_intensity(
+    config: Config,
+    dates: pd.DatetimeIndex,
+    t: np.ndarray,
+    annual_position: np.ndarray,
+    weekly_position: np.ndarray,
+    rng: np.random.Generator,
+) -> dict[str, object]:
+    """Compute every factor of lambda(t) plus the discount/price schedules.
 
-    dates = pd.date_range(start=config.start, periods=config.days, freq="D")
-    t = np.arange(config.days, dtype=float)
-    annual_position = (dates.dayofyear.to_numpy() - 1) / DAYS_PER_YEAR
-    weekly_position = dates.dayofweek.to_numpy() / 7.0
-
+    Returns a dict rather than a dataclass so `generate()` and
+    `_build_components_frame()` can pick out only the fields they need.
+    """
     trend = trend_factor(t)
     weekly = fourier_factor(weekly_position, WEEKLY_HARMONICS)
     annual = fourier_factor(annual_position, ANNUAL_HARMONICS)
@@ -477,20 +482,38 @@ def generate(config: Config) -> dict[str, pd.DataFrame]:
     noise = noise_factor(config.days, rng)
 
     intensity = trend * weekly * annual * events * promo * noise
-
     discount = np.clip(
         BASE_DISCOUNT + event_discount + promo_discount, 0.0, MAX_DISCOUNT
     )
     price_index = np.exp(PRICE_INFLATION * t / DAYS_PER_YEAR)
 
-    counts = apportion(config.rows, intensity)
+    return {
+        "trend": trend,
+        "weekly": weekly,
+        "annual": annual,
+        "events": events,
+        "promo": promo,
+        "noise": noise,
+        "intensity": intensity,
+        "discount": discount,
+        "price_index": price_index,
+        "event_log": event_log,
+    }
 
-    # ---- expand days into line items ------------------------------------
+
+def _expand_to_line_items(
+    config: Config,
+    dates: pd.DatetimeIndex,
+    counts: np.ndarray,
+    catalogue: pd.DataFrame,
+    weights: np.ndarray,
+    discount: np.ndarray,
+    price_index: np.ndarray,
+    rng: np.random.Generator,
+) -> pd.DataFrame:
+    """Expand per-day intensity/counts into one row per line item."""
     day_index = np.repeat(np.arange(config.days), counts)
     n_rows = len(day_index)
-
-    catalogue = build_catalogue(rng)
-    weights = sku_day_weights(catalogue, annual_position)
 
     # Inverse-CDF sampling: one uniform per row, compared against that day's
     # cumulative SKU distribution. Vectorised over all 100k rows at once — a
@@ -526,7 +549,7 @@ def generate(config: Config) -> dict[str, pd.DataFrame]:
 
     channel_index = rng.choice(len(CHANNELS), size=n_rows, p=CHANNEL_WEIGHTS)
 
-    line_items = pd.DataFrame(
+    return pd.DataFrame(
         {
             "date": dates[day_index].strftime("%Y-%m-%d"),
             "order_id": [f"ORD-{n:07d}" for n in order_number],
@@ -539,6 +562,54 @@ def generate(config: Config) -> dict[str, pd.DataFrame]:
         }
     )
 
+
+def _build_components_frame(
+    dates: pd.DatetimeIndex,
+    parts: dict[str, object],
+    counts: np.ndarray,
+    daily: pd.DataFrame,
+) -> pd.DataFrame:
+    components = pd.DataFrame(
+        {
+            "date": dates.strftime("%Y-%m-%d"),
+            "trend": parts["trend"],
+            "weekly": parts["weekly"],
+            "annual": parts["annual"],
+            "events": parts["events"],
+            "promo": parts["promo"],
+            "noise": parts["noise"],
+            "intensity": parts["intensity"],
+            "discount": parts["discount"],
+            "price_index": parts["price_index"],
+            "line_items": counts,
+        }
+    ).round(6)
+    return components.merge(
+        daily.rename(columns={"revenue": "actual_revenue", "units_sold": "actual_units"}),
+        on="date",
+        how="left",
+    )
+
+
+def generate(config: Config) -> dict[str, pd.DataFrame]:
+    rng = np.random.default_rng(config.seed)
+
+    dates = pd.date_range(start=config.start, periods=config.days, freq="D")
+    t = np.arange(config.days, dtype=float)
+    annual_position = (dates.dayofyear.to_numpy() - 1) / DAYS_PER_YEAR
+    weekly_position = dates.dayofweek.to_numpy() / 7.0
+
+    parts = _build_intensity(config, dates, t, annual_position, weekly_position, rng)
+    counts = apportion(config.rows, parts["intensity"])
+
+    catalogue = build_catalogue(rng)
+    weights = sku_day_weights(catalogue, annual_position)
+
+    line_items = _expand_to_line_items(
+        config, dates, counts, catalogue, weights,
+        parts["discount"], parts["price_index"], rng,
+    )
+
     daily = (
         line_items.groupby("date", as_index=False)[["revenue", "units_sold"]]
         .sum()
@@ -546,39 +617,122 @@ def generate(config: Config) -> dict[str, pd.DataFrame]:
     )
     daily["revenue"] = daily["revenue"].round(2)
 
-    components = pd.DataFrame(
-        {
-            "date": dates.strftime("%Y-%m-%d"),
-            "trend": trend,
-            "weekly": weekly,
-            "annual": annual,
-            "events": events,
-            "promo": promo,
-            "noise": noise,
-            "intensity": intensity,
-            "discount": discount,
-            "price_index": price_index,
-            "line_items": counts,
-        }
-    ).round(6)
-    components = components.merge(
-        daily.rename(columns={"revenue": "actual_revenue", "units_sold": "actual_units"}),
-        on="date",
-        how="left",
-    )
+    components = _build_components_frame(dates, parts, counts, daily)
 
     return {
         "line_items": line_items,
         "daily": daily,
         "components": components,
         "catalogue": catalogue.round(4),
-        "events": event_log,
+        "events": parts["event_log"],
     }
 
 
 # --------------------------------------------------------------------------
 # Verification
 # --------------------------------------------------------------------------
+
+
+def _verify_summary(frames: dict[str, pd.DataFrame], daily: pd.DataFrame) -> list[str]:
+    return [
+        f"rows (line items) : {len(frames['line_items']):,}",
+        f"days              : {len(daily):,}",
+        f"date range        : {daily['date'].min().date()} -> {daily['date'].max().date()}",
+        f"total revenue     : ${frames['line_items']['revenue'].sum():,.2f}",
+        f"total units       : {int(frames['line_items']['units_sold'].sum()):,}",
+        f"orders            : {frames['line_items']['order_id'].nunique():,}",
+        f"skus              : {frames['line_items']['sku'].nunique()}",
+        "",
+    ]
+
+
+def _verify_trend(daily: pd.DataFrame) -> list[str]:
+    lines = ["TREND — mean daily revenue by year (growth is compounded, not linear)"]
+    yearly = daily.groupby("year")["revenue"].mean()
+    previous = None
+    for year, value in yearly.items():
+        change = "" if previous is None else f"   {value / previous - 1:+7.1%} YoY"
+        lines.append(f"  {year}   ${value:>12,.0f}{change}")
+        previous = value
+    lines.append(f"  configured annual growth: {np.expm1(TREND_LOG_GROWTH):+.1%}")
+    lines.append("")
+    return lines
+
+
+def _verify_weekly_seasonality(daily: pd.DataFrame) -> list[str]:
+    lines = ["WEEKLY SEASONALITY — mean revenue by weekday, indexed to 100"]
+    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    weekday = daily.groupby("dow")["revenue"].mean().reindex(order)
+    index = 100 * weekday / weekday.mean()
+    for name, value in index.items():
+        bar = "#" * int(round(value / 4))
+        lines.append(f"  {name:<10} {value:6.1f}  {bar}")
+    lines.append("")
+    return lines
+
+
+def _verify_annual_seasonality(daily: pd.DataFrame) -> list[str]:
+    lines = ["ANNUAL SEASONALITY — mean revenue by month, indexed to 100"]
+    monthly = daily.groupby("month")["revenue"].mean()
+    index = 100 * monthly / monthly.mean()
+    for month, value in index.items():
+        bar = "#" * int(round(value / 4))
+        lines.append(f"  {pd.Timestamp(2024, month, 1):%b}        {value:6.1f}  {bar}")
+    lines.append("")
+    return lines
+
+
+def _verify_event_spikes(frames: dict[str, pd.DataFrame], daily: pd.DataFrame) -> list[str]:
+    lines = ["EVENT SPIKES — event-day revenue vs the surrounding 30-day median"]
+    revenue_by_date = daily.set_index("date")["revenue"]
+    for _, row in frames["events"].iterrows():
+        when = pd.Timestamp(row["date"])
+        if when not in revenue_by_date.index:
+            continue
+        window = revenue_by_date.loc[when - pd.Timedelta(days=21) : when + pd.Timedelta(days=21)]
+        baseline = window.median()
+        lines.append(
+            f"  {row['date']}  {row['event']:<20} "
+            f"${revenue_by_date[when]:>11,.0f}   {revenue_by_date[when] / baseline:5.2f}x baseline"
+        )
+    lines.append("")
+    return lines
+
+
+def _verify_sku_seasonality(frames: dict[str, pd.DataFrame]) -> list[str]:
+    lines = ["SKU-LEVEL SEASONALITY — peak month per category (they differ on purpose)"]
+    items = frames["line_items"].copy()
+    items["month"] = pd.to_datetime(items["date"]).dt.month
+    by_category = items.groupby(["category", "month"])["units_sold"].sum().unstack()
+    share = by_category.div(by_category.sum(axis=1), axis=0)
+    for category, row in share.iterrows():
+        peak = int(row.idxmax())
+        trough = int(row.idxmin())
+        lines.append(
+            f"  {category:<12} peak {pd.Timestamp(2024, peak, 1):%b}  "
+            f"trough {pd.Timestamp(2024, trough, 1):%b}  "
+            f"(peak share {row.max():.1%} vs trough {row.min():.1%})"
+        )
+    lines.append("")
+    return lines
+
+
+def _verify_noise_floor(frames: dict[str, pd.DataFrame], daily: pd.DataFrame) -> list[str]:
+    components = frames["components"]
+    deterministic = np.log(
+        components["trend"] * components["weekly"] * components["annual"]
+        * components["events"] * components["promo"]
+    )
+    observed = np.log(daily["revenue"].to_numpy())
+    residual = observed - deterministic
+    r2 = 1 - residual.var() / observed.var()
+    return [
+        "NOISE FLOOR — how much of log revenue the deterministic parts explain",
+        f"  R^2 of log revenue on the known components: {r2:.3f}",
+        f"  residual sd (log): {residual.std():.4f}  ~= {np.expm1(residual.std()):.1%} day-to-day",
+        "  (the remainder is the AR(1) noise plus Poisson basket variation —",
+        "   a forecaster scoring far below this is leaking, not learning)",
+    ]
 
 
 def verify(frames: dict[str, pd.DataFrame]) -> str:
@@ -595,86 +749,13 @@ def verify(frames: dict[str, pd.DataFrame]) -> str:
     daily["year"] = daily["date"].dt.year
 
     lines: list[str] = []
-    add = lines.append
-
-    add(f"rows (line items) : {len(frames['line_items']):,}")
-    add(f"days              : {len(daily):,}")
-    add(f"date range        : {daily['date'].min().date()} -> {daily['date'].max().date()}")
-    add(f"total revenue     : ${frames['line_items']['revenue'].sum():,.2f}")
-    add(f"total units       : {int(frames['line_items']['units_sold'].sum()):,}")
-    add(f"orders            : {frames['line_items']['order_id'].nunique():,}")
-    add(f"skus              : {frames['line_items']['sku'].nunique()}")
-    add("")
-
-    add("TREND — mean daily revenue by year (growth is compounded, not linear)")
-    yearly = daily.groupby("year")["revenue"].mean()
-    previous = None
-    for year, value in yearly.items():
-        change = "" if previous is None else f"   {value / previous - 1:+7.1%} YoY"
-        add(f"  {year}   ${value:>12,.0f}{change}")
-        previous = value
-    add(f"  configured annual growth: {np.expm1(TREND_LOG_GROWTH):+.1%}")
-    add("")
-
-    add("WEEKLY SEASONALITY — mean revenue by weekday, indexed to 100")
-    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    weekday = daily.groupby("dow")["revenue"].mean().reindex(order)
-    index = 100 * weekday / weekday.mean()
-    for name, value in index.items():
-        bar = "#" * int(round(value / 4))
-        add(f"  {name:<10} {value:6.1f}  {bar}")
-    add("")
-
-    add("ANNUAL SEASONALITY — mean revenue by month, indexed to 100")
-    monthly = daily.groupby("month")["revenue"].mean()
-    index = 100 * monthly / monthly.mean()
-    for month, value in index.items():
-        bar = "#" * int(round(value / 4))
-        add(f"  {pd.Timestamp(2024, month, 1):%b}        {value:6.1f}  {bar}")
-    add("")
-
-    add("EVENT SPIKES — event-day revenue vs the surrounding 30-day median")
-    revenue_by_date = daily.set_index("date")["revenue"]
-    for _, row in frames["events"].iterrows():
-        when = pd.Timestamp(row["date"])
-        if when not in revenue_by_date.index:
-            continue
-        window = revenue_by_date.loc[when - pd.Timedelta(days=21) : when + pd.Timedelta(days=21)]
-        baseline = window.median()
-        add(
-            f"  {row['date']}  {row['event']:<20} "
-            f"${revenue_by_date[when]:>11,.0f}   {revenue_by_date[when] / baseline:5.2f}x baseline"
-        )
-    add("")
-
-    add("SKU-LEVEL SEASONALITY — peak month per category (they differ on purpose)")
-    items = frames["line_items"].copy()
-    items["month"] = pd.to_datetime(items["date"]).dt.month
-    by_category = items.groupby(["category", "month"])["units_sold"].sum().unstack()
-    share = by_category.div(by_category.sum(axis=1), axis=0)
-    for category, row in share.iterrows():
-        peak = int(row.idxmax())
-        trough = int(row.idxmin())
-        add(
-            f"  {category:<12} peak {pd.Timestamp(2024, peak, 1):%b}  "
-            f"trough {pd.Timestamp(2024, trough, 1):%b}  "
-            f"(peak share {row.max():.1%} vs trough {row.min():.1%})"
-        )
-    add("")
-
-    add("NOISE FLOOR — how much of log revenue the deterministic parts explain")
-    components = frames["components"].copy()
-    deterministic = np.log(
-        components["trend"] * components["weekly"] * components["annual"]
-        * components["events"] * components["promo"]
-    )
-    observed = np.log(daily["revenue"].to_numpy())
-    residual = observed - deterministic
-    r2 = 1 - residual.var() / observed.var()
-    add(f"  R^2 of log revenue on the known components: {r2:.3f}")
-    add(f"  residual sd (log): {residual.std():.4f}  ~= {np.expm1(residual.std()):.1%} day-to-day")
-    add("  (the remainder is the AR(1) noise plus Poisson basket variation —")
-    add("   a forecaster scoring far below this is leaking, not learning)")
+    lines += _verify_summary(frames, daily)
+    lines += _verify_trend(daily)
+    lines += _verify_weekly_seasonality(daily)
+    lines += _verify_annual_seasonality(daily)
+    lines += _verify_event_spikes(frames, daily)
+    lines += _verify_sku_seasonality(frames)
+    lines += _verify_noise_floor(frames, daily)
 
     return "\n".join(lines)
 
@@ -684,7 +765,7 @@ def verify(frames: dict[str, pd.DataFrame]) -> str:
 # --------------------------------------------------------------------------
 
 
-def main() -> None:
+def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generate synthetic sales data with known trend and seasonality.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -709,15 +790,10 @@ def main() -> None:
     parser.add_argument("--outdir", type=Path, default=Path("backend/data"))
     parser.add_argument("--verify", action="store_true",
                         help="measure the injected signal back out and print it")
-    args = parser.parse_args()
+    return parser
 
-    config = Config(
-        rows=args.rows, days=args.days, start=args.start,
-        seed=args.seed, outdir=args.outdir,
-    )
 
-    frames = generate(config)
-
+def _write_outputs(config: Config, frames: dict[str, pd.DataFrame]) -> None:
     config.outdir.mkdir(parents=True, exist_ok=True)
     targets = {
         "sales_line_items.csv": frames["line_items"],
@@ -731,6 +807,18 @@ def main() -> None:
         frame.to_csv(path, index=False)
         size_mb = path.stat().st_size / (1024 * 1024)
         print(f"wrote {path}  ({len(frame):,} rows, {size_mb:.2f} MB)")
+
+
+def main() -> None:
+    args = _build_arg_parser().parse_args()
+
+    config = Config(
+        rows=args.rows, days=args.days, start=args.start,
+        seed=args.seed, outdir=args.outdir,
+    )
+
+    frames = generate(config)
+    _write_outputs(config, frames)
 
     if args.verify:
         print()

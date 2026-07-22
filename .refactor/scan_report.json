@@ -1,13 +1,20 @@
 {
-  "total_files_scanned": 4,
+  "total_files_scanned": 1,
   "hotspots": [
     {
-      "file": "backend\\app\\forecasting.py",
-      "lines": 476,
-      "long_functions": [],
+      "file": "backend\\scripts\\generate_sales_data.py",
+      "lines": 829,
+      "long_functions": [
+        {
+          "start_line": 504,
+          "length": 62,
+          "signature": "def _expand_to_line_items("
+        }
+      ],
       "max_nesting": 4,
       "flags": [
-        "file_too_long(476 lines)"
+        "file_too_long(829 lines)",
+        "1_long_function(s)"
       ]
     }
   ]
