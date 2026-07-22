@@ -105,7 +105,7 @@ def leak_demo(daily: pd.DataFrame) -> None:
     )
 
 
-def main() -> None:
+def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--horizon", type=int, default=HORIZON_DAYS)
     parser.add_argument("--data", type=Path, default=DATA_PATH)
@@ -114,24 +114,29 @@ def main() -> None:
         action="store_true",
         help="Also print the one-step-ahead shifted-vs-unshifted rolling-mean comparison.",
     )
-    args = parser.parse_args()
+    return parser
 
-    daily = load_daily(args.data)
+
+def _run_folds(daily: pd.DataFrame, horizon: int) -> list[dict[str, float]]:
     n = len(daily)
-
     results = []
     for frac in FOLD_FRACTIONS:
         cut = int(n * frac)
-        result = run_fold(daily, cut, args.horizon)
+        result = run_fold(daily, cut, horizon)
         if result is not None:
             results.append(result)
 
     if not results:
         raise SystemExit(
             "No folds produced — series too short for the configured fold fractions "
-            f"(n={n}, horizon={args.horizon}, min_history={MIN_HISTORY_DAYS})."
+            f"(n={n}, horizon={horizon}, min_history={MIN_HISTORY_DAYS})."
         )
+    return results
 
+
+def _print_fold_table(results: list[dict[str, float]]) -> str:
+    """Print the per-fold comparison table and return the header (its width sets
+    the divider length the caller prints around the summary)."""
     header = (
         f"{'origin':<12}{'train_days':>11}"
         f"{'model_MAE':>12}{'model_RMSE':>12}{'model_MAPE':>11}"
@@ -145,7 +150,10 @@ def main() -> None:
             f"{r['model_mae']:>12.2f}{r['model_rmse']:>12.2f}{r['model_mape']:>10.2f}%"
             f"{r['naive_mae']:>12.2f}{r['naive_rmse']:>12.2f}{r['naive_mape']:>10.2f}%"
         )
+    return header
 
+
+def _print_mape_summary(results: list[dict[str, float]], header: str) -> None:
     mean_model_mape = float(np.mean([r["model_mape"] for r in results]))
     mean_naive_mape = float(np.mean([r["naive_mape"] for r in results]))
     print("-" * len(header))
@@ -156,6 +164,15 @@ def main() -> None:
         print(f"Model beats the seasonal-naive baseline by {lift:.2f} points of MAPE.")
     else:
         print(f"Model is WORSE than the seasonal-naive baseline by {-lift:.2f} points of MAPE.")
+
+
+def main() -> None:
+    args = _build_arg_parser().parse_args()
+
+    daily = load_daily(args.data)
+    results = _run_folds(daily, args.horizon)
+    header = _print_fold_table(results)
+    _print_mape_summary(results, header)
 
     if args.leak_demo:
         leak_demo(daily)
