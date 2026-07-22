@@ -312,7 +312,7 @@ section 4 and 6 act as a regression test:
 
 ```bash
 cd "C:/Users/ASUS/OneDrive/Desktop/cereal"
-python -m jupyter nbconvert --to notebook --execute --inplace "Data Analysis.ipynb" \
+python -m jupyter nbconvert --to notebook --execute --inplace "docs/Data Analysis.ipynb" \
   --ExecutePreprocessor.timeout=900
 ```
 

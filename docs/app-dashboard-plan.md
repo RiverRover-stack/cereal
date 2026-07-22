@@ -102,7 +102,7 @@ Phase 2–4 backend work; adding them now would mean styling states that cannot 
 - `src/layouts/Layout.astro` as the shell for both new pages.
 - Existing tokens/utilities in `src/styles/global.css` (`bg-canvas-soft`, `border-hairline`,
   `rounded-pill`, `shadow-soft`, `text-display-*`, `font-mono`) — no new tokens needed.
-- Component specs in `DESIGN.md` (`form-input`, `card-marketing`, `ex-empty-state-card`).
+- Component specs in `docs/product/DESIGN.md` (`form-input`, `card-marketing`, `ex-empty-state-card`).
 
 ## Verification (every claim checked, nothing asserted)
 1. `python -m venv`, install `backend/requirements.txt`, run `uvicorn` — then `curl`
