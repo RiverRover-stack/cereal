@@ -22,10 +22,16 @@
       "commit": "39681cb",
       "summary": "split generate()/verify()/main() into focused helpers (_build_intensity, _expand_to_line_items, _build_components_frame, per-section _verify_* functions, _build_arg_parser, _write_outputs); verified byte-identical CSV regeneration vs committed data/*.csv",
       "tests": "pass"
+    },
+    {
+      "module": "backend/tests",
+      "files": ["backend/tests/backtest.py"],
+      "commit": "0198988",
+      "summary": "split main() into _build_arg_parser, _run_folds, _print_fold_table, _print_mape_summary; verified identical MAE/RMSE/MAPE output before vs after; no hotspots remaining",
+      "tests": "pass"
     }
   ],
   "batches_remaining": [
-    "backend/tests (backtest.py)",
     "scripts (build_dataset.py)",
     "src/lib (api.ts)"
   ]
