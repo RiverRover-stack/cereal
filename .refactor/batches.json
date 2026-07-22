@@ -1,0 +1,41 @@
+{
+  "batches": [
+    {
+      "module": "models",
+      "files": [
+        "models\\features.py",
+        "models\\train.py"
+      ]
+    },
+    {
+      "module": "backend\\app",
+      "files": [
+        "backend\\app\\forecasting.py"
+      ]
+    },
+    {
+      "module": "backend\\scripts",
+      "files": [
+        "backend\\scripts\\generate_sales_data.py"
+      ]
+    },
+    {
+      "module": "backend\\tests",
+      "files": [
+        "backend\\tests\\backtest.py"
+      ]
+    },
+    {
+      "module": "scripts",
+      "files": [
+        "scripts\\build_dataset.py"
+      ]
+    },
+    {
+      "module": "src\\lib",
+      "files": [
+        "src\\lib\\api.ts"
+      ]
+    }
+  ]
+}

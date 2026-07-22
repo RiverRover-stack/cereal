@@ -167,27 +167,27 @@ def X_of(df: pd.DataFrame, features: list[str] | None = None) -> pd.DataFrame:
     return df[features or FEATURES].copy()
 
 
-def assert_no_target_leakage(df: pd.DataFrame) -> dict:
-    """Runtime proof of the two leakage claims. Raises if either fails.
-
-    Returns the measured evidence so the training script can print it.
-    """
-    evidence = {}
-
-    # (a) No banned column may appear in the feature list.
+def _assert_no_banned_features_used() -> dict:
+    """(a) No banned column may appear in the feature list."""
     overlap = sorted(set(FEATURES) & set(BANNED_FEATURES))
     assert not overlap, f"banned column used as a feature: {overlap}"
-    evidence["banned_features_used"] = overlap
+    return {"banned_features_used": overlap}
 
-    # (b/c) TWO-SIDED contract check on the frozen rolling column. Reconstruct both
-    #     candidate windows from the target and require an exact match on the
-    #     strictly-past one and an explicit NON-match on the leaky one. Checking only
-    #     the positive side would let a future rebuild that reverts to the unshifted
-    #     window slip through if the two happened to agree on the compared subset.
+
+def _assert_rolling_window_contract(df: pd.DataFrame) -> dict:
+    """(b/c) TWO-SIDED contract check on the frozen rolling column.
+
+    Reconstruct both candidate windows from the target and require an exact
+    match on the strictly-past one and an explicit NON-match on the leaky one.
+    Checking only the positive side would let a future rebuild that reverts to
+    the unshifted window slip through if the two happened to agree on the
+    compared subset.
+    """
     g = df.groupby("sku", observed=True)["total_units"]
     incl_today = g.transform(lambda s: s.rolling(7).mean())
     excl_today = g.transform(lambda s: s.shift(1).rolling(7).mean())
     frozen = df["units_rolling_7d_avg"]
+    evidence = {}
 
     m_exc = excl_today.notna()
     evidence["frozen_rolling_equals_window_EXCLUDING_today"] = bool(
@@ -215,23 +215,46 @@ def assert_no_target_leakage(df: pd.DataFrame) -> dict:
     evidence["corr_target_vs_leaky_rolling(reconstructed, NOT used)"] = float(
         incl_today.corr(df["total_units"])
     )
+    return evidence
 
-    # (e) Every feature we use must be computable without the current row's target.
-    #     units_lag_7 / units_rolling_7d_avg are shifts; the rest are calendar or
-    #     catalogue attributes. Assert the shift columns are never equal to the
-    #     target on more rows than chance would give.
+
+def _assert_lag_is_strictly_past(df: pd.DataFrame) -> dict:
+    """(e) Every feature we use must be computable without the current row's target.
+
+    units_lag_7 / units_rolling_7d_avg are shifts; the rest are calendar or
+    catalogue attributes. Assert the shift columns are never equal to the
+    target on more rows than chance would give.
+    """
     recomputed_lag = df.groupby("sku", observed=True)["total_units"].shift(7)
     m3 = recomputed_lag.notna()  # first 7 rows per SKU can't be re-derived post-trim
-    evidence["units_lag_7_is_strictly_past"] = bool(
-        np.allclose(recomputed_lag[m3], df["units_lag_7"][m3])
-    )
-    evidence["units_lag_7_rows_verified"] = int(m3.sum())
-    assert evidence["units_lag_7_is_strictly_past"]
+    is_strictly_past = bool(np.allclose(recomputed_lag[m3], df["units_lag_7"][m3]))
+    assert is_strictly_past
+    return {
+        "units_lag_7_is_strictly_past": is_strictly_past,
+        "units_lag_7_rows_verified": int(m3.sum()),
+    }
 
-    # (f) How often `units_lag_7` is genuinely 7 CALENDAR days back. Not a leak,
-    #     but it means the feature is not a weekday-seasonality signal.
-    evidence["units_lag_7_pct_exactly_7_calendar_days"] = float(
-        (df.groupby("sku", observed=True)["date"].diff(7).dt.days == 7).mean()
-    )
 
+def _measure_lag_calendar_alignment(df: pd.DataFrame) -> dict:
+    """(f) How often `units_lag_7` is genuinely 7 CALENDAR days back.
+
+    Not a leak, but it means the feature is not a weekday-seasonality signal.
+    """
+    return {
+        "units_lag_7_pct_exactly_7_calendar_days": float(
+            (df.groupby("sku", observed=True)["date"].diff(7).dt.days == 7).mean()
+        )
+    }
+
+
+def assert_no_target_leakage(df: pd.DataFrame) -> dict:
+    """Runtime proof of the two leakage claims. Raises if either fails.
+
+    Returns the measured evidence so the training script can print it.
+    """
+    evidence = {}
+    evidence.update(_assert_no_banned_features_used())
+    evidence.update(_assert_rolling_window_contract(df))
+    evidence.update(_assert_lag_is_strictly_past(df))
+    evidence.update(_measure_lag_calendar_alignment(df))
     return evidence
