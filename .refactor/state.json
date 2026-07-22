@@ -8,10 +8,16 @@
       "commit": "dbaef36",
       "summary": "extracted train.py main() into named stage functions in new train_pipeline.py; split features.py's assert_no_target_leakage() into 4 helpers; verified byte-identical output/artifacts before vs after",
       "tests": "pass"
+    },
+    {
+      "module": "backend/app",
+      "files": ["backend/app/forecasting.py"],
+      "commit": "2090e84",
+      "summary": "extracted _recursive_forecast_loop() out of _forecast_recursive() (was 52 lines); left file-length flag as-is (3 parallel small strategies + rationale docstring)",
+      "tests": "pass"
     }
   ],
   "batches_remaining": [
-    "backend/app (forecasting.py)",
     "backend/scripts (generate_sales_data.py)",
     "backend/tests (backtest.py)",
     "scripts (build_dataset.py)",
